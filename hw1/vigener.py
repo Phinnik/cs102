@@ -62,5 +62,3 @@ def decrypt_vigenere(ciphertext, keyword):
         plaintext += chr(newCharCode)
 
     return plaintext
-
-print(encrypt_vigenere("hello, world", "computr"))
