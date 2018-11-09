@@ -1,14 +1,16 @@
 import requests
 from datetime import datetime
 import time
-#import plotly
-
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
 
 config = {
     'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca08125318fa7447b71d66cc2ffd2458f9f24a8',
-    'PLOTLY_USERNAME': 'Имя пользователя Plot.ly',
-    'PLOTLY_API_KEY': 'Ключ доступа Plot.ly'
+    'PLOTLY_USERNAME': 'Phinnik',
+    'PLOTLY_API_KEY': '1ODbUp9WCRkWxNlAGCDG'
 }
+plotly.tools.set_credentials_file(username=config['PLOTLY_USERNAME'], api_key=config['PLOTLY_API_KEY'])
 
 
 def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
@@ -118,32 +120,31 @@ def count_dates_from_messages(messages):
 
     :param messages: список сообщений
     """
-    dates_amounts = [[], []]
+    freq_list = [[], []]
     for mes in messages:
         date = datetime.fromtimestamp(mes['date']).strftime("%Y-%m-%d")
-        if date in dates_amounts[0]:
-            ind = dates_amounts[0].index(date)
-            dates_amounts[1][ind] += 1
+        if date in freq_list[0]:
+            ind = freq_list[0].index(date)
+            freq_list[1][ind] += 1
         else:
-            dates_amounts[0].append(date)
-            dates_amounts[1].append(1)
-
-    return dates_amounts
-
-messages = get_many_messages(162045852, 1000)
-d_a = count_dates_from_messages(messages)
-print(d_a)
+            freq_list[0].append(date)
+            freq_list[1].append(1)
+    return freq_list
 
 
-'''
+
 def plotly_messages_freq(freq_list):
     """ Построение графика с помощью Plot.ly
 
     :param freq_list: список дат и их частот
     """
-    # PUT YOUR CODE HERE
+    x = freq_list[0]
+    y = freq_list[1]
+    data = [go.Scatter(x=x, y=y)]
+    py.plot(data)
 
 
+'''
 def get_network(users_ids, as_edgelist=True):
     # PUT YOUR CODE HERE
 
