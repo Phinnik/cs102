@@ -5,7 +5,7 @@ import time
 
 
 config = {
-    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba77203eca08125318fa7447b71d66cc2ffd2458f9f24a8',
+    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca083125318fa7447b71d66cc2ffd2458f9f24a8',
     'PLOTLY_USERNAME': 'Имя пользователя Plot.ly',
     'PLOTLY_API_KEY': 'Ключ доступа Plot.ly'
 }
@@ -20,6 +20,7 @@ def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
     :param max_retries: максимальное число повторных запросов
     :param backoff_factor: коэффициент экспоненциального нарастания задержки
     """
+    time.sleep(1/3)
     r = requests.get(url, params)
     retries = 1
     request_status = r.status_code
@@ -77,8 +78,8 @@ def age_predict(user_id):
         days += (today_datetime - bday_datetime).days
     return days // len(friends) // 365
 
-'''
-def messages_get_history(user_id, offset=0, count=20):
+
+def messages_get_history(user_id, offset=0, count=200):
     """ Получить историю переписки с указанным пользователем
 
     :param user_id: идентификатор пользователя, с которым нужно получить историю переписки
@@ -90,9 +91,29 @@ def messages_get_history(user_id, offset=0, count=20):
     assert isinstance(offset, int), "offset must be positive integer"
     assert offset >= 0, "user_id must be positive integer"
     assert count >= 0, "user_id must be positive integer"
-    # PUT YOUR CODE HERE
+    
+    url = "https://api.vk.com/method/messages.getHistory"
+    parameters = {
+        'access_token': config['VK_ACCESS_TOKEN'],
+        'user_id': user_id,
+        'offset': offset,
+        'count': count,
+        'v': 5.87
+    }
+    messages_history = get(url, params=parameters)
+    return messages_history
 
 
+def get_many_messages(user_id, count, offset=0):
+    # TODO придумать более грамотное решение
+    """ возвращает <count//200*200> сообщений"""
+    messages = []
+    for i in range(count // 200):
+        messages.extend(messages_get_history(user_id, offset=offset + i * 200, count=200)['items'])
+    return messages
+
+
+'''
 def count_dates_from_messages(messages):
     """ Получить список дат и их частот
 
