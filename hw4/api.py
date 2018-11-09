@@ -5,7 +5,7 @@ import time
 
 
 config = {
-    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca083125318fa7447b71d66cc2ffd2458f9f24a8',
+    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca08125318fa7447b71d66cc2ffd2458f9f24a8',
     'PLOTLY_USERNAME': 'Имя пользователя Plot.ly',
     'PLOTLY_API_KEY': 'Ключ доступа Plot.ly'
 }
@@ -113,15 +113,29 @@ def get_many_messages(user_id, count, offset=0):
     return messages
 
 
-'''
 def count_dates_from_messages(messages):
     """ Получить список дат и их частот
 
     :param messages: список сообщений
     """
-    # PUT YOUR CODE HERE
+    dates_amounts = [[], []]
+    for mes in messages:
+        date = datetime.fromtimestamp(mes['date']).strftime("%Y-%m-%d")
+        if date in dates_amounts[0]:
+            ind = dates_amounts[0].index(date)
+            dates_amounts[1][ind] += 1
+        else:
+            dates_amounts[0].append(date)
+            dates_amounts[1].append(1)
+
+    return dates_amounts
+
+messages = get_many_messages(162045852, 1000)
+d_a = count_dates_from_messages(messages)
+print(d_a)
 
 
+'''
 def plotly_messages_freq(freq_list):
     """ Построение графика с помощью Plot.ly
 
