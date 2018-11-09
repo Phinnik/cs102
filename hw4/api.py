@@ -5,7 +5,7 @@ import time
 
 
 config = {
-    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca08125318fa7447b71d66cc2ffd2458f9f243a8',
+    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba77203eca08125318fa7447b71d66cc2ffd2458f9f24a8',
     'PLOTLY_USERNAME': 'Имя пользователя Plot.ly',
     'PLOTLY_API_KEY': 'Ключ доступа Plot.ly'
 }
@@ -27,7 +27,7 @@ def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
         time.sleep(timeout * backoff_factor * retries)
         r = requests.get(url, params)
         retries += 1
-    return r.json()
+    return r.json()['response']
 
 
 def get_friends(user_id, fields='', count=5):
@@ -45,25 +45,39 @@ def get_friends(user_id, fields='', count=5):
         'user_id': user_id,
         'fields': fields,
         'count': count,
-        'v': 5.6
+        'v': 5.87
     }
     friends = get(url, params=parameters)
     return friends
 
 
-'''
+def select_friends(friends):
+    """ Выборка друзей с полной датой рождения"""
+    good_friends = []
+    for fr in friends:
+        if 'bdate' in fr:
+            if len(fr['bdate']) == 9:
+                good_friends.append(fr)
+    return good_friends
+
+
 def age_predict(user_id):
     """ Наивный прогноз возраста по возрасту друзей
-
     Возраст считается как медиана среди возраста всех друзей пользователя
-
     :param user_id: идентификатор пользователя
     """
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert user_id > 0, "user_id must be positive integer"
-    # PUT YOUR CODE HERE
+    friends = get_friends(user_id, fields='bdate,', count=1000)['items']
+    friends = select_friends(friends)
+    today_datetime = datetime.today()
+    days = 0
+    for fr in friends:
+        bday_datetime = datetime.strptime(fr['bdate'], '%d.%m.%Y')
+        days += (today_datetime - bday_datetime).days
+    return days // len(friends) // 365
 
-
+'''
 def messages_get_history(user_id, offset=0, count=20):
     """ Получить историю переписки с указанным пользователем
 
