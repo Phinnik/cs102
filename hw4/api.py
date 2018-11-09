@@ -1,10 +1,11 @@
 import requests
 from datetime import datetime
+import time
 #import plotly
 
 
 config = {
-    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa31e7dcad0351f51ca630c127ba7720eca08125318fa7447b71d66cc2ffd2458f9f24a8',
+    'VK_ACCESS_TOKEN': 'da2c13c7d22618fa1e7dcad0351f51ca630c127ba7720eca08125318fa7447b71d66cc2ffd2458f9f243a8',
     'PLOTLY_USERNAME': 'Имя пользователя Plot.ly',
     'PLOTLY_API_KEY': 'Ключ доступа Plot.ly'
 }
@@ -19,7 +20,14 @@ def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
     :param max_retries: максимальное число повторных запросов
     :param backoff_factor: коэффициент экспоненциального нарастания задержки
     """
-    # PUT YOUR CODE HERE
+    r = requests.get(url, params)
+    retries = 1
+    request_status = r.status_code
+    while (request_status != 200) and (retries < max_retries):
+        time.sleep(timeout * backoff_factor * retries)
+        r = requests.get(url, params)
+        retries += 1
+    return r.json()
 
 
 def get_friends(user_id, fields='', count=5):
@@ -39,8 +47,9 @@ def get_friends(user_id, fields='', count=5):
         'count': count,
         'v': 5.6
     }
-    r = requests.get(url, params=parameters)
-    return r.json()
+    friends = get(url, params=parameters)
+    return friends
+
 
 '''
 def age_predict(user_id):
