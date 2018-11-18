@@ -1,17 +1,10 @@
 # TODO: separate graphing stuff and vk analisys with different files
-# TODO: write excecute function to get data from vk faster
 # TODO: remake graphing function. Add more settings
 
 
 import requests
 import time
 from datetime import datetime
-import plotly
-import plotly.plotly as py
-import plotly.graph_objs as go
-import igraph
-from igraph import Graph, plot
-import numpy as np
 import config
 
 
@@ -40,6 +33,16 @@ def is_api_ok():
     r = requests.get(url, params=parameters).json()
     print(r)
     return r
+
+
+def execute(code):
+    # run excecute method wich alows to make 25 API requests in one time
+    url = 'https://api.vk.com/method/execute'
+    parameters = {'code':code,
+                  'access_token': config.VK['VK_ACCESS_TOKEN'],
+                  'v': config.VK['API_VERSION']}
+    result = get(url, params=parameters)
+    return result
 
 
 def get_friends(user_id, fields='', count=5):
@@ -118,6 +121,34 @@ def get_many_messages(user_id, count, offset=0):
     return messages
 
 
+def get_messages_with_execute(user_id, count=10000, offset=0):
+    messages = []
+    code = '''var messages = [];
+              var methods_count = 0;
+              while (methods_count < 25) {{
+                  var mes = API.messages.getHistory({{"user_id":{},
+                                                      "count": {},
+                                                      "offset": methods_count * 200 + {} }});
+                  messages.push(mes["items"]);
+                  methods_count = methods_count + 1;
+              }}
+              return messages;
+           '''
+
+    for i in range(count//(25*200)+1):
+        messages_executed = execute(code.format(user_id, 200, i*5000 + offset))
+        
+        for j in range(len(messages_executed)):
+            messages_executed.extend(messages_executed[0])
+            messages_executed.pop(0)
+
+        messages.extend(messages_executed)
+
+    for i in range(len(messages) - count):
+        messages.pop(-1)
+    return messages
+
+
 def count_dates_from_messages(messages):
     """ Получить список дат и их частот """
     freq_list = [[], []]
@@ -130,14 +161,6 @@ def count_dates_from_messages(messages):
             freq_list[0].append(date)
             freq_list[1].append(1)
     return freq_list
-
-
-def plotly_messages_freq(freq_list):
-    """ Построение графика с помощью Plot.ly """
-    x = freq_list[0]
-    y = freq_list[1]
-    data = [go.Scatter(x=x, y=y)]
-    py.plot(data)
 
 
 def get_network(users_ids, as_edgelist=True):
@@ -160,38 +183,10 @@ def get_network(users_ids, as_edgelist=True):
     return network
 
 
-def plot_graph(network):
-    # Создание вершин
-    vertices = [i for i in range(len(network))]
-
-    # Создание графа
-    g = Graph(vertex_attrs={"label":vertices},
-        edges=network, directed=False)
-
-    # Задаем стиль отображения графа
-    N = len(vertices)
-    visual_style = {}
-    visual_style["layout"] = g.layout_fruchterman_reingold(
-        maxiter=1000,
-        area=N**3,
-        repulserad=N**3)
-
-    g.simplify(multiple=True, loops=True)
-    """
-    communities = g.community_edge_betweenness(directed=False)
-    clusters = communities.as_clustering()
-    print(clusters)
-
-    pal = igraph.drawing.colors.ClusterColoringPalette(len(clusters))
-    g.vs['color'] = pal.get_many(clusters.membership)
-    """
-    # Отрисовываем граф
-    plot(g, **visual_style)
-
-
 def main():
-    # login to your plotly account
-    plotly.tools.set_credentials_file(username=config.PLOTLY['USERNAME'], api_key=config.PLOTLY['API_KEY'])
+    a = messages_get_history(162045852)['count']
+    print(a)
+
 
 if __name__ == '__main__':
     main()
