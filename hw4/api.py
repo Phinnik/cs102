@@ -191,7 +191,7 @@ def get_network(users_ids, as_edgelist=True):
     
 
 
-network = get_network(my_friends)
+get_friends(config.VK['MY_ID'])
 
 
 '''
