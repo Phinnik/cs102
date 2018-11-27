@@ -1,14 +1,11 @@
-# TODO: separate graphing stuff and vk analisys with different files
-# TODO: remake graphing function. Add more settings
-
-
 import requests
 import time
-from datetime import datetime
 import config
+from api_models import User, Message
+from typing import List
 
 
-def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
+def get(url:str, params:dict={}, timeout:int=5, max_retries:int=5, backoff_factor:int=0.3) -> dict:
     """ Выполнить GET-запрос c экспоненциальным нарастанием задержки при ошибке """
     request_status = False
     retries = 1
@@ -22,7 +19,7 @@ def get(url, params={}, timeout=5, max_retries=5, backoff_factor=0.3):
     return r.json()['response']
 
 
-def is_api_ok():
+def is_api_ok() -> dict:
     # функция для отладки. Проверка, доступно ли api
     url = "https://api.vk.com/method/friends.get"
     parameters = {'access_token': config.VK['VK_ACCESS_TOKEN'],
@@ -35,7 +32,7 @@ def is_api_ok():
     return r
 
 
-def execute(code):
+def execute(code: str) -> dict:
     # run excecute method wich alows to make 25 API requests in one time
     url = 'https://api.vk.com/method/execute'
     parameters = {'code':code,
@@ -45,7 +42,7 @@ def execute(code):
     return result
 
 
-def get_friends(user_id, fields='', count=5):
+def get_friends(user_id: int, fields: str='bdate', count:int=5, offset:int=0) -> List[User]:
     """ Вернуть данныe о друзьях пользователя """
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert isinstance(fields, str), "fields must be string"
@@ -54,41 +51,49 @@ def get_friends(user_id, fields='', count=5):
     url = "https://api.vk.com/method/friends.get"
     parameters = {'access_token': config.VK['VK_ACCESS_TOKEN'],
                   'user_id': user_id,
+                  'offset': offset,
                   'fields': fields,
                   'count': count,
                   'v': config.VK['API_VERSION']}
 
-    friends = get(url, params=parameters)
+    friends = get(url, params=parameters)['items']
+    for i in range(len(friends)):
+        friends[i] = User(**friends[i])
     return friends
 
 
-def select_friends(friends):
-    """ Выборка друзей с полной датой рождения """
-    good_friends = []
-    for fr in friends:
-        if 'bdate' in fr:
-            if len(fr['bdate']) == 9:
-                good_friends.append(fr)
-    return good_friends
+def get_friends_with_execute(user_ids: List[int]) -> List[List[User]]:
+    print('executing friends')
+    friends_list = []
+    for i in range(len(user_ids) // 25 + 1):
+        code = """
+                  var users = {};
+                  var friends = [];
+                  var i = 0;
+                  while (i < users.length) {{
+                    var user_friends = API.friends.get( {{"user_id":users[i], "fields":"online"}})["items"];
+                    friends.push(user_friends);
+                    i = i+1;
+                  }}
+                  return friends;
+               """.format(user_ids[i*25:(i+1)*25])
+        user_friends_list = execute(code)
+        friends_list.extend(user_friends_list)
+
+    # deleting deactivated users and makink users model list
+    deactivated = []
+    for i in range(len(friends_list)):
+        if friends_list[i] is None:
+            deactivated.append(i)
+            continue
+        for j in range(len(friends_list[i])):
+            friends_list[i][j] = User(**friends_list[i][j])
+    for ind in deactivated:
+        friends_list.pop(ind)
+    return friends_list
 
 
-def age_predict(user_id):
-    """ Наивный прогноз возраста по возрасту друзей
-    Возраст считается как медиана среди возраста всех друзей пользователя """
-    assert isinstance(user_id, int), "user_id must be positive integer"
-    assert user_id > 0, "user_id must be positive integer"
-
-    friends = get_friends(user_id, fields='bdate,', count=1000)['items']
-    friends = select_friends(friends)
-    today_datetime = datetime.today()
-    days = 0
-    for fr in friends:
-        bday_datetime = datetime.strptime(fr['bdate'], '%d.%m.%Y')
-        days += (today_datetime - bday_datetime).days
-    return days // len(friends) // 365.25
-
-
-def messages_get_history(user_id, offset=0, count=200):
+def messages_get_history(user_id: int, offset: int=0, count: int=200, rev:int=0) -> List[Message]:
     """ Получить историю переписки с указанным пользователем """
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert user_id > 0, "user_id must be positive integer"
@@ -102,26 +107,14 @@ def messages_get_history(user_id, offset=0, count=200):
         'user_id': user_id,
         'offset': offset,
         'count': count,
+        'rev' : rev,
         'v': config.VK['API_VERSION']
     }
     messages_history = get(url, params=parameters)
     return messages_history
 
 
-def get_many_messages(user_id, count, offset=0):
-    """ возвращает список сообщений учитывая ограничения api"""
-    messages = []
-    start_time = time.time()
-    for i in range(0, count, 200):
-        if i % 3 == 0:
-            time.sleep(time.time() - start_time)
-            start_time = time.time()
-        new_messages = messages_get_history(user_id, offset=offset + i, count=200)
-        messages.extend(new_messages['items'])
-    return messages
-
-
-def get_messages_with_execute(user_id, count=10000, offset=0):
+def get_messages_with_execute(user_id:int, count:int=10000, offset:int=0) -> List[Message]:
     messages = []
     code = '''var messages = [];
               var methods_count = 0;
@@ -148,45 +141,7 @@ def get_messages_with_execute(user_id, count=10000, offset=0):
         messages.pop(-1)
     return messages
 
-
-def count_dates_from_messages(messages):
-    """ Получить список дат и их частот """
-    freq_list = [[], []]
-    for mes in messages:
-        date = datetime.fromtimestamp(mes['date']).strftime("%Y-%m-%d")
-        if date in freq_list[0]:
-            ind = freq_list[0].index(date)
-            freq_list[1][ind] += 1
-        else:
-            freq_list[0].append(date)
-            freq_list[1].append(1)
-    return freq_list
-
-
-def get_network(users_ids, as_edgelist=True):
-
-    network = []
-    start_time = time.time()
-    for i, user in enumerate(users_ids):
-        # sleep for not to be banned
-        if i % 3 == 0:
-            time.sleep(time.time() - start_time)
-        # use try to exclude blocked users
-        try:
-            user_friends = set(get_friends(user, count=0)['items'])
-            user_connections = set(users_ids) & user_friends
-            for part in user_connections:
-                connection = (users_ids.index(user), users_ids.index(part))
-                network.append(connection)            
-        except Exception as e:
-            pass
-    return network
-
-
 def main():
-    a = messages_get_history(162045852)['count']
-    print(a)
+    pass
 
-
-if __name__ == '__main__':
-    main()
+main()
