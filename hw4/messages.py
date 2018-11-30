@@ -21,11 +21,12 @@ plotly.tools.set_credentials_file(
 
 
 def fromtimestamp(ts: int) -> datetime.date:
+    # Returns normal data from unixtime
     return datetime.datetime.fromtimestamp(ts).date()
 
 
 def count_dates_from_messages(messages: List[Message]) -> Tuple[Dates, Frequencies]:
-    """ Получить список дат и их частот """
+    # returns frequensy list
     freq_list = ([], [])
     for mes in messages:
         date = fromtimestamp(mes['date'])
@@ -39,7 +40,7 @@ def count_dates_from_messages(messages: List[Message]) -> Tuple[Dates, Frequenci
 
 
 def plotly_messages_freq(dates: Dates, freq: Frequencies) -> None:
-    """ Построение графика с помощью Plot.ly """
+    # Plotting graph with plotly
     x = dates
     y = freq
     data = [go.Scatter(x=x, y=y)]
@@ -47,7 +48,8 @@ def plotly_messages_freq(dates: Dates, freq: Frequencies) -> None:
 
 
 def main():
-    messages = get_messages_with_execute(162045852, count = 20000)
+    # Making frequency graph with my roommate
+    messages = get_messages_with_execute(90735275, count=20000)
     freq_list = count_dates_from_messages(messages)
     plotly_messages_freq(freq_list[0], freq_list[1])
 

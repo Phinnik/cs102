@@ -1,13 +1,21 @@
 from datetime import datetime
-from statistics import median
 from typing import Optional, List
 from api_models import User
 from api import get_friends
 
 
+def select_friends(friends: List[User]) -> List[User]:
+    # Choosing users with full bdate
+    good_friends = []
+    for fr in friends:
+        if fr.bdate is not None:
+            if len(fr.bdate) >= 8:
+                good_friends.append(fr)
+    return good_friends
+
+
 def age_predict(user_id: int) -> Optional[int]:
-    """ Наивный прогноз возраста по возрасту друзей
-    Возраст считается как медиана среди возраста всех друзей пользователя """
+    # Counts median in ages of user friends
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert user_id > 0, "user_id must be positive integer"
 
@@ -21,18 +29,9 @@ def age_predict(user_id: int) -> Optional[int]:
     return days // len(friends) // 365.25
 
 
-def select_friends(friends: List[User]) -> List[User]:
-    """ Выборка друзей с полной датой рождения """
-    good_friends = []
-    for fr in friends:
-        if fr.bdate is not None:
-            if len(fr.bdate) >= 8:
-                good_friends.append(fr)
-    return good_friends
-
-
 def main():
-    age = age_predict(434463725)
+    # Predicting age of Dementiy
+    age = age_predict(817934)
     print(age)
 
 

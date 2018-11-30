@@ -13,7 +13,7 @@ def get_network(users_ids, as_edgelist=True):
     matrix = [[0]*len(users_ids) for i in range(len(users_ids))]
     for i, user in enumerate(users_ids):
         time.sleep(1/3)
-        # use try to exclude blocked users
+        # Using try to exclude blocked users
         try:
             user_friends = set(get_friends(user, count=0)['items'])
             user_connections = set(users_ids) & user_friends
@@ -30,7 +30,7 @@ def get_network(users_ids, as_edgelist=True):
 
 
 def get_network_with_execute(users: List[User]):
-    # Gets network using get_friends_with_execute 
+    # Gets network using get_friends_with_execute
     users = [u.id for u in users]
     friends_list = get_friends_with_execute(users)
     friends_list = [[friend.id for friend in user] for user in friends_list]
@@ -47,27 +47,26 @@ def get_network_with_execute(users: List[User]):
 def plot_graph(user_id):
     # plots network graph
     user_friends = get_friends(user_id, count=0)
-    #deleting deactivated and closed users
+    # Deleting deactivated and closed users
     user_friends = [f for f in user_friends if (f.deactivated is None and not f.is_closed)]
-    
     edges = get_network_with_execute(user_friends)
-
     vertices = [fr.last_name for fr in user_friends]
 
-    # Создание графа
-    g = Graph(vertex_attrs={"label":vertices},
-        edges=edges, directed=False)
+    g = Graph(vertex_attrs={"label": vertices},
+              edges=edges, directed=False)
     g.es["width"] = 1
     g.simplify(multiple=True, loops=True)
 
     print(g)
 
-    #communities = g.community_edge_betweenness(directed=False)
-    #clusters = communities.as_clustering()
-    #pal = igraph.drawing.colors.ClusterColoringPalette(len(clusters))
-    #g.vs['color'] = pal.get_many(clusters.membership)
+    # sometimes can't make comunity coloring because too many comunyties?
 
-    # Задаем стиль отображения графа
+    # communities = g.community_edge_betweenness(directed=False)
+    # clusters = communities.as_clustering()
+    # pal = igraph.drawing.colors.ClusterColoringPalette(len(clusters))
+    # g.vs['color'] = pal.get_many(clusters.membership)
+
+    # Making a style of graph
     N = len(vertices)
 
     visual_style = {
@@ -83,7 +82,7 @@ def plot_graph(user_id):
             repulserad=N ** 2)
     }
 
-    # Отрисовываем граф
+    # Plotting a graph
     plot(g, **visual_style)
 
 
