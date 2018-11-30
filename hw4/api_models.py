@@ -14,6 +14,7 @@ class BaseUser(BaseModel):
 class User(BaseUser):
     """ Модель пользователя с необязательным полем дата рождения """
     bdate: Optional[str]
+    is_closed: Optional[bool]
 
 
 class Message(BaseModel):

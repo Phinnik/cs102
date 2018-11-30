@@ -6,7 +6,7 @@ from typing import List
 
 
 def get(url:str, params:dict={}, timeout:int=5, max_retries:int=5, backoff_factor:int=0.3) -> dict:
-    """ Выполнить GET-запрос c экспоненциальным нарастанием задержки при ошибке """
+    # Makes get request with exponential grow of timeout in case of error
     request_status = False
     retries = 1
     while (request_status == False) and (retries < max_retries):
@@ -19,21 +19,18 @@ def get(url:str, params:dict={}, timeout:int=5, max_retries:int=5, backoff_facto
     return r.json()['response']
 
 
-def is_api_ok() -> dict:
-    # функция для отладки. Проверка, доступно ли api
-    url = "https://api.vk.com/method/friends.get"
+def server_time() -> int:
+    # Returns time on VK server. Use to check if you have access to api
+    url = "https://api.vk.com/method/utils.getServerTime"
     parameters = {'access_token': config.VK['VK_ACCESS_TOKEN'],
-                  'user_id': config.VK['MY_ID'],
-                  'fields': '',
-                  'count': 1,
                   'v': config.VK['API_VERSION']}
     r = requests.get(url, params=parameters).json()
-    print(r)
-    return r
+    return r['response']
 
 
 def execute(code: str) -> dict:
-    # run excecute method wich alows to make 25 API requests in one time
+    # Runs excecute method wich alows to make 25 API requests in one time
+    # It uses VKscript language
     url = 'https://api.vk.com/method/execute'
     parameters = {'code':code,
                   'access_token': config.VK['VK_ACCESS_TOKEN'],
@@ -43,7 +40,7 @@ def execute(code: str) -> dict:
 
 
 def get_friends(user_id: int, fields: str='bdate', count:int=5, offset:int=0) -> List[User]:
-    """ Вернуть данныe о друзьях пользователя """
+    # returns info about user friends
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert isinstance(fields, str), "fields must be string"
     assert user_id > 0, "user_id must be positive integer"
@@ -63,6 +60,7 @@ def get_friends(user_id: int, fields: str='bdate', count:int=5, offset:int=0) ->
 
 
 def get_friends_with_execute(user_ids: List[int]) -> List[List[User]]:
+    # Uses execute method to collect data about friends of many people
     print('executing friends')
     friends_list = []
     for i in range(len(user_ids) // 25 + 1):
@@ -80,21 +78,21 @@ def get_friends_with_execute(user_ids: List[int]) -> List[List[User]]:
         user_friends_list = execute(code)
         friends_list.extend(user_friends_list)
 
-    # deleting deactivated users and makink users model list
-    deactivated = []
-    for i in range(len(friends_list)):
+    # deleting deactivated or closed users and making users model list
+    i = 0
+    while i < len(friends_list):
         if friends_list[i] is None:
-            deactivated.append(i)
+            print(i)
+            friends_list.pop(i)
             continue
-        for j in range(len(friends_list[i])):
-            friends_list[i][j] = User(**friends_list[i][j])
-    for ind in deactivated:
-        friends_list.pop(ind)
+        for j, friend in enumerate(friends_list[i]):
+            friends_list[i][j] = User(**friend)
+        i+=1
     return friends_list
 
 
 def messages_get_history(user_id: int, offset: int=0, count: int=200, rev:int=0) -> List[Message]:
-    """ Получить историю переписки с указанным пользователем """
+    # Gets messages with user
     assert isinstance(user_id, int), "user_id must be positive integer"
     assert user_id > 0, "user_id must be positive integer"
     assert isinstance(offset, int), "offset must be positive integer"
@@ -115,6 +113,7 @@ def messages_get_history(user_id: int, offset: int=0, count: int=200, rev:int=0)
 
 
 def get_messages_with_execute(user_id:int, count:int=10000, offset:int=0) -> List[Message]:
+    # Uses execute method to collect many messages
     messages = []
     code = '''var messages = [];
               var methods_count = 0;
@@ -141,7 +140,12 @@ def get_messages_with_execute(user_id:int, count:int=10000, offset:int=0) -> Lis
         messages.pop(-1)
     return messages
 
-def main():
-    pass
 
-main()
+def main():
+    my_friends = get_friends(82935666, count = 1000)
+    friends_ids = [f.id for f in my_friends]
+    fr = get_friends_with_execute(friends_ids)
+
+
+if __name__ == '__main__':
+    main()
